@@ -1,0 +1,22 @@
+#Sintaxis: Nombre de usuario: Comentario: Directorio home: crear dir home si no existe (SI/NO): Shell por defecto
+
+usuario1:Usuario 1:/home/usuario1:si:/bin/bash
+usuario2::/home/usuario2:no:/bin/bash
+usuario3:Usuario 3:/home/usuario3:si:/bin/sh
+usuario4::/home/usuario4:no:/bin/bash
+usuario5:Usuario 5:/home/usuario5:no:/bin/sh
+usuario6:Usuario 6:/home/usuario6:si:/bin/bash
+usuario7::/home/usuario7:si:/bin/sh
+usuario8:Usuario 8:/home/usuario8:no:/bin/bash
+usuario9::/home/usuario9:si:/bin/bash
+usuario10:Usuario 10:/home/usuario10:no:/bin/sh
+usuario11::/home/usuario11:no:/bin/bash
+usuario12:Usuario 12:/home/usuario12:si:/bin/bash
+usuario13:Usuario 13:/home/usuario13:no:/bin/sh
+usuario14::/home/usuario14:no:/bin/bash
+usuario15:Usuario 15:/home/usuario15:si:/bin/sh
+usuario16::/home/usuario16:no:/bin/bash
+usuario17:Usuario 17:/home/usuario17:si:/bin/bash
+usuario18::/home/usuario18:no:/bin/sh
+usuario19:Usuario 19:/home/usuario19:si:/bin/bash
+usuario20::/home/usuario20:no:/bin/sh
