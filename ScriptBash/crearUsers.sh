@@ -1,17 +1,11 @@
 #!/bin/bash
 
-
-#Defino opciones por defecto para campos vacios
-opdefcom="Comentario por defecto"
-opdefhome="/home/$user"
-opdefcrearhome=True
-opdefshell="/bin/bash"
-
 #Defino una variable para $1 que seria la lista
 #Defino una variable para la expresion regular a utilizar
 arch=$1
-regex='^[^:]*:[^:]*:[^:]*:(si|no):/bin/(bash|sh|zsh)$'
-
+#regex='^[^:]*:[^:]*:[^:]*:(si|no):/bin/(bash|sh|zsh)$'
+#Modifico la variable de expresion regular agregando '[^[:space:]]+' porque asi me aseguro de que los campos de username y dir home no tengan espacios
+regex='^[^:][^[:space:]]+*:[^:]*:[^:][^[:space:]]+*:(si|no):/bin/(bash|sh|zsh)$'
 #Se chequea que los parametros sean minimo 1 y maximo 3
 if [ $# -lt 1 ]; then
 	echo "Debe usar minimo 1 parametro (el archivo con la lista de usuarios)">&2
@@ -59,16 +53,45 @@ if [ ! $totlineas -eq $validas ]; then
   	exit 5
 fi
 
+#Defino opciones por defecto
+opdefcom="Comentario por defecto"
+opdefhome="/home/$c1"
+#La variable $opdefcrearhome la uso tanto como opcion por defecto como tambien en caso de tener que crear el home si en la lista aparece la opcion 'si' en el campo 4
+opdefcrearhome="-m"
+opdefshell="/bin/bash"
+
 #Ahora debo recorrer la lista para poder ver si hay campos vacios
-#Modificar la variable IFS me permite que el for no salte de linea cuando encuentre espacios
+#Modificar la variable IFS me permite que el for no salte de linea cuando encuentre espacios. En vez de separar por espaciosi, tab y saltos de linea, ahora IFS solo separa por saltos de linea
+
+#el if -z funciona como un test -z, evalua si la variable esta vacia
 IFS=$'\n'
 for i in $(cat $arch); do
-        c2=$(echo "$i" | cut -d: -f2)
+	# c1 es el nombre del usuario, c2 es comentario, c3 es dir home, c4 es si crea o no el home, c5 es la shell
+        c1=$(echo "$i" | cut -d: -f1)
+	c2=$(echo "$i" | cut -d: -f2)
 	c3=$(echo "$i" | cut -d: -f3)
 	c4=$(echo "$i" | cut -d: -f4)
 	c5=$(echo "$i" | cut -d: -f5)
+	#Mediante varios if voy detectando los campos vacios y agregando a los mismos las opciones por defecto	
 	if [ -z $c2 ]; then
-	 
+		c2=$opdefcom
 	fi
+	
+	if [ -z $c3 ]; then
+		c3=$opdefhome
+	fi
+	#Si $c4 esta vacio o es igual a 'si' voy a asignar que cree el home
+	#Hago un else que corresponde a si el campo 4 dice 'no', para sustituir el 'no' por vacio
+	if [ -z $c4 ] || [ "$c4" = "si" ]; then
+		c4="$opdefcrearhome"
+	else
+		c4=""
+	fi
+
+	if [ -z $c5 ]; then
+		c5=$opdefshell
+	fi
+	
+	echo "useradd $c1 -c '$c2' -d $c3 $c4 -s $c5"
 done
 
