@@ -3,17 +3,16 @@
 #Defino una variable para $1 que seria la lista
 #Defino una variable para la expresion regular a utilizar
 arch=$1
-#regex='^[^:]*:[^:]*:[^:]*:(si|no):/bin/(bash|sh|zsh)$'
 #Modifico la variable de expresion regular agregando '[^[:space:]]+' porque asi me aseguro de que los campos de username y dir home no tengan espacios
 regex='^[^:][^[:space:]]+*:[^:]*:[^:][^[:space:]]+*:(si|no):/bin/(bash|sh|zsh)$'
-#Se chequea que los parametros sean minimo 1 y maximo 3
+#Se chequea que los parametros sean minimo 1 y maximo 4, siendo el 4 una contraseña en caso de que el 3 sea -c
 if [ $# -lt 1 ]; then
 	echo "Debe usar minimo 1 parametro (el archivo con la lista de usuarios)">&2
 	exit 0
 fi
 
 if [ $# -gt 4 ]; then
-	echo "Se aceptan maximo 3 parametros: La lista de los usuarios, -c para asignar una contraseña y -i para mostrar la creacion del usuario">&2
+	echo "Se aceptan maximo 4 parametros: La lista de los usuarios, -c para asignar una contraseña, la contraseña, y -i para mostrar la creacion del usuario">&2
 	exit 1
 fi
 
@@ -110,7 +109,7 @@ fi
 
 #Se hace un if para evaluar $3
 #Solo evalua $3 si no se manejó ya un caso con -ci/-ic o -c contraseña
-if [ $passTrue -eq 0 ] && [ $mostrar -eq 0 ] && test -n "$3"; then
+if [ $passTrue -eq 0 ] && [ $mostrar -eq 0 ] && test -n "$3" ; then
     if [ "$3" = "-c" ]; then
         if test -z "$4"; then
             echo "Luego del modificador '-c' debe asignar la contraseña por defecto para los usuarios" >&2
@@ -126,7 +125,7 @@ if [ $passTrue -eq 0 ] && [ $mostrar -eq 0 ] && test -n "$3"; then
         exit 7
     fi
 fi
-
+#En este caso evaluo que si $2 es -i y $3 exista entonces $3 debe ser si o si -c o dar error
 if [ "$2" = "-i" ] && [ -n "$3" ]; then
 	if [ ! "$3" = "-c" ]; then
 		echo "El parametro 3: '$3' no es un modificador valido">&2
@@ -134,13 +133,28 @@ if [ "$2" = "-i" ] && [ -n "$3" ]; then
 	fi
 fi
 
+#En este caso estoy evaluando si existe el parametro 4, $4 es solo valido como contraseña si $3 era -c que se evaluó anteriormente, en ese caso $4 sería la contraseña
+#El otro caso de validez sería que $4 sea -i luego de que $2 sea -c, porque $3 sería la contraseña, si no se cumple ninguno de esos casos es inválido
+if [ "$2" = "-c" ] && [ -n "$4" ]; then
+	if [ "$4" = "-i" ]; then
+		mostrar=1
+	else
+		echo "Parametro 4: $4 no es valido">&2
+		exit 9
+	fi
+
+#Este elif se pone para evaluar cuando $2 no es -c y $3 no es -c, porque en ese caso no hay forma que $4 sea valido
+#El [ ! "$3" = "-c" ] permite que no de error si $3 es -c, porque preciso que en ese caso $4 sea valido porque es la contraseña
+elif [ ! "$2" = "-c" ] && [ -n "$4" ] && [ ! "$3" = "-c" ]; then	
+	echo "Parametro 4: $4 no es valido">&2
+	exit 9
+fi
 #Modificar la variable IFS me permite que el for no salte de linea cuando encuentre espacios
 #En vez de separar por espacios, tab y saltos de linea, ahora IFS solo separa por saltos de linea
 IFS=$'\n'
 
 #Ahora debo recorrer la lista para poder ver si hay campos vacios
 #test -z es para detectar si la variable esta vacia
-
 usuarios_creados=0
 for i in $(cat "$arch"); do
     # c1 es el nombre del usuario, c2 es comentario, c3 es dir home, c4 es si crea o no el home, c5 es la shell
@@ -164,27 +178,33 @@ for i in $(cat "$arch"); do
 	if test -z "$c4" || [ "$c4" = "si" ]; then
 		c4="$opdefcrearhome"
 	else
-		c4=""
+		c4="-M"
 	fi
 
 	if test -z "$c5"; then
 		c5=$opdefshell
 	fi
-
-	if grep -q "^$c1:" /etc/passwd; then
-		yaexiste=$c1
-		echo "ATENCIÓN: el usuario '$c1' no fue creado porque ya existe" >&2
-		echo ""
+	#Evaluo si el user ya existe con el comando id, en ese caso guardo el username en una variable para evaluarlo más adelante y mostrar por pantalla el error
+	if id "$c1" &>/dev/null; then
+		yaexiste="$c1"
+		if [ "$mostrar" = "1" ]; then
+			echo "ATENCIÓN: el usuario '$c1' no fue creado porque ya existe" >&2
+			echo ""
+		fi
 	fi
-
-	if [ "$passTrue" -eq 1 ]; then
+	#Evaluo si la opcion -c está activa o no, y en cada caso creo los usuarios según ese criterio
+	#Si la variable yaexiste contiene al usuario entonces no lo creo porque ya existe
+	if [ "$passTrue" -eq 1 ] && [ ! "$yaexiste"="$c1" ]; then
 		useradd "$c1" -c "$c2" -d "$c3" $c4 -s "$c5" &>/dev/null
 		echo "$pass" | passwd --stdin "$c1" &>/dev/null
-	else
-        useradd "$c1" -c "$c2" -d "$c3" $c4 -s "$c5" &>/dev/null
+	elif [ "$passTrue" -eq 0 ] && [ ! "$yaexiste"="$c1" ]; then
+        	useradd "$c1" -c "$c2" -d "$c3" $c4 -s "$c5" &>/dev/null
 	fi
-
-	if id "$c1" &>/dev/null && [ ! "$yaexiste" = "$c1" ]; then
+	#Evaluo que el usuario haya sido creado con el comando id como hice anteriormente, pero tambien evaluo la variable $yaexiste.
+	#Evaluo esa variable porque si el usuario ya existia no quiero que se ejecute el mensaje de usuario creado con exito etc etc
+	#Si $yaexiste no es igual a $c1 pero el comando id da verdadero quiere decir que el usuario no existia y ahora existe, osea fue creado
+	#Se evalua también la variable $mostrar para saber si la opción -i está activa o no
+	if id "$c1" &>/dev/null && [ ! "$yaexiste" = "$c1" ] && [ "$mostrar" = "1" ]; then
         	echo "Usuario '$c1' creado con éxito con datos indicados:"
  	        echo "Comentario: $c2"
 	        echo "Dir home: $c3"
@@ -198,7 +218,7 @@ for i in $(cat "$arch"); do
    	        usuarios_creados=$((usuarios_creados+1))
 	elif [ "$yaexiste" = "$c1" ]; then
 		echo -n
-	else
+	elif [ ! "$yaexiste" = "$c1" ] && [ "$mostrar" = "1" ]; then
                 echo "ATENCIÓN: el usuario '$c1' no pudo ser creado"
                 echo ""
     	fi
