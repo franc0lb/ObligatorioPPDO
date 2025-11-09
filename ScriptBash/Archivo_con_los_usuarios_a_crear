@@ -10,9 +10,8 @@ usuario9::/home/usuario9:si:/bin/bash
 usuario10:Usuario 10:/home/usuario10:no:/bin/sh
 usuario11::/home/usuario11:no:/bin/bash
 usuario12:Usuario 12:/home/usuario12:si:/bin/bash
-usuario13:Usuario 13:/home/usuario13:no:/bin/sh
-usuario14::/home/usuario14:no:/bin/bash
+usuario13:Usuario elmaligno 13:/home/usuario13:no:/bin/sh
 usuario15:Usuario 15:/home/usuario15:si:/bin/sh
 usuario16::/home/usuario16:no:/bin/bash
 usuario18::/home/usuario18:no:/bin/sh
-usuario20::/home/usuario20:no:/bin/sh
+usuario19::::

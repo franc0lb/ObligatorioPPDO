@@ -1,10 +1,14 @@
 #!/bin/bash
 
 #Defino una variable para $1 que seria la lista
-#Defino una variable para la expresion regular a utilizar
+#Defino una variable para la expresion regular que utilizo para verificar que haya 4 campos y otra para que la sintaxis de esos 4 campos
 arch=$1
-#Modifico la variable de expresion regular agregando '[^[:space:]]+' porque asi me aseguro de que los campos de username y dir home no tengan espacios
-regex='^[^:][^[:space:]]+*:[^:]*:[^:][^[:space:]]+*:(si|no):/bin/(bash|sh|zsh)$'
+#la regex de la variable regex chequea que el nombre de usuario no este vacio y que contenga caracteres validos
+#que comentario sea cualquier cosa menos 2 puntos,que el home sea cualquier cosa sin espacios
+#que el campo de crear home pueda ser si o no en mayusculas/minusculas 0 o 1 vez
+#y que el campo de la shell pueda ser algo que arranque con barra, siga con caracteres, numeros y guiones bajos y altos, se repita x veces, 0 o 1 vez y termine la linea
+regex='^[^:][a-zA-Z0-9_-]*:[^:]*:[a-zA-Z0-9_/-]*[^[:space:]:]*:(SI|NO|si|no)?:[a-zA-Z0-9/_-]*?'
+regexCampos='^[^:]*:[^:]*:[^:]*:[^:]*:[^:]*$'
 #Se chequea que los parametros sean minimo 1 y maximo 4, siendo el 4 una contraseña en caso de que el 3 sea -c
 if [ $# -lt 1 ]; then
 	echo "Debe usar minimo 1 parametro (el archivo con la lista de usuarios)">&2
@@ -35,31 +39,79 @@ if [ ! -r $arch ]; then
 fi
 
 
-#Se compara cantidad de lineas con la cantidad de lineas validas
-#Las lineas validas son aquellas que coincidan con la expresion regular
-#Lo que estoy haciendo es chequear la sintaxis de la lista
+#Se compara cantidad de lineas totales con la cantidad de lineas validas segun la expresion de la variable regexCampos para chequear que haya 5 campos
 totlineas=$(cat $arch | wc -l)
-validas=$(grep -Ec $regex $arch)
-novalidas=$(grep -Env $regex $arch)
+validas1=$(grep -Ec $regexCampos $arch)
+novalidas1=$(grep -Env $regexCampos $arch)
 
-if [ ! $totlineas -eq $validas ]; then
-	echo ""	
+if [ ! $totlineas -eq $validas1 ]; then
   	echo "Se detectaron errores en la sintaxis de la lista">&2
-  	echo "Errores detectados: $(($totlineas - $validas))">&2
-	echo ""
-  	echo -e "Lineas invalidas: \n$novalidas">&2
-  	echo ""
+  	echo "Errores detectados: $(($totlineas - $validas1))">&2
+	echo "">&2
+  	echo -e "Lineas invalidas: \n$novalidas1">&2
+  	echo "">&2
   	echo "Revise la sintaxis de la lista y no deje lineas en blanco">&2
+	echo "Recuerde que son 5 campos en total, por ende las lineas deben contener 4 ':' como máximo">&2
+	echo "Recuerde que el primer campo no puede estar vacío ya que es el nombre del usuario">&2
   	exit 5
 fi
 
-#Defino opciones por defecto
-opdefcom="Comentario por defecto"
-opdefhome="/home/$c1"
-#La variable $opdefcrearhome la uso tanto como opcion por defecto como tambien en caso de tener que crear el home si en la lista aparece la opcion 'si' en el campo 4
-opdefcrearhome="-m"
-opdefshell="/bin/bash"
+#Se compara la cantidad de lineas totales con la cantidad de lineas validas segun la expresion de la variable regex
+validas2=$(grep -Ec $regex $arch)
+novalidas2=$(grep -Env $regex $arch)
 
+if [ ! $totlineas -eq $validas2 ]; then
+        echo ""
+        echo "Se detectaron errores en la sintaxis de la lista">&2
+        echo "Errores detectados: $(($totlineas - $validas2))">&2
+	echo "Revise la sintaxis de la lista">&2
+	echo "Recuerde que el nombre del usuario no puede contener espacios ni caracteres raros">&2
+	echo "Recuerde que el home del usuario no puede contener espacios ni caracteres raros">&2
+        echo "">&2
+        echo -e "Lineas invalidas: \n$novalidas2">&2
+        echo "">&2
+        exit 20
+fi
+
+#Aca chequeo que no se repita el usuario en la lista, el cut me da el primer campo, el sort me ordena la lista, el uniq -d me da los repetidos
+#el if testea que $userRepetidos no esté vacío, si es cierto entonces hay usuarios repetidos, y se procede a mostrar esas lineas por pantalla
+userRepetido=$(cut -d: -f1 "$arch" | sort | uniq -d)
+if test -n "$userRepetido"; then
+	userRepetido=$(grep -En ^$userRepetido $arch)
+	echo "Error de sintaxis, hay usuarios repetidos en la lista">&2
+	echo "Lineas no validas:">&2
+	echo "">&2
+	echo "$userRepetido">&2
+	exit 21
+fi
+
+#Aca estoy detectando si el campo 5 que corresponde a la shell por defecto empieza o no con '/', en caso de existir, y que no contenga espacios ni caracteres no comunes
+shell=$(cut -d: -f5 "$arch")
+RegexShellCorrecta='^[^:]*:[^:]*:[^:]*:[^:]*:/[a-zA-Z0-9_/-]*$'
+if echo "$shell" | grep -Eqv '^/[a-zA-Z0-9_/-]*$'; then
+	shellIncorrecta=$(grep -Evn $RegexShellCorrecta  "$arch")
+	echo "Error de sintaxis, hay usuarios con una shell no valida">&2
+	echo "Recuerde que el campo de la shell debe comenzar siempre con '/' y no puede contener ningún caracter raro, espacio o tabulación">&2
+	echo "Lineas no validas:">&2
+	echo "">&2
+	echo "$shellIncorrecta">&2
+	exit 22
+fi
+
+#Aca chequeo el campo del home (campo 3) para asegurarme que empiece por '/' y no contenga caracteres raros
+homeCampo=$(cut -d: -f3 "$arch")
+RegexHome='^[^:]*:[^:]*:/[a-zA-Z0-9/-_]*:[^:]*:/[a-zA-Z0-9_/-]*$'
+if echo "$homeCampo" | grep -Eqv '/[a-zA-Z0-9/-_]*'; then
+        HomeIncorrecto=$(grep -Evn $RegexHome  "$arch")
+        echo "Error de sintaxis, campo home del usuario no valido">&2
+        echo "Recuerde que el campo del home debe comenzar siempre con '/' y no puede contener ningún caracter raro, espacio o tabulación">&2
+        echo "Lineas no validas:">&2
+        echo "">&2
+        echo "$HomeIncorrecto">&2
+        exit 23
+fi
+
+	
 #Ahora hago varios if que van a ir detectando las opciones que paso el usuario, para asignar contraseña y/o mostrar la creacion del usuario en pantalla
 #Defino variables que en este caso 0 es falso y 1 verdadero, que corresponden a si se ingreso una contraseña con -c y si se debe mostrar la creacion del usuario por pantalla
 passTrue=0
@@ -157,20 +209,27 @@ IFS=$'\n'
 #test -z es para detectar si la variable esta vacia
 usuarios_creados=0
 for i in $(cat "$arch"); do
-    # c1 es el nombre del usuario, c2 es comentario, c3 es dir home, c4 es si crea o no el home, c5 es la shell
+        #c1 es el nombre del usuario, c2 es comentario, c3 es dir home, c4 es si crea o no el home, c5 es la shell
 	c1=$(echo "$i" | cut -d: -f1)
 	c2=$(echo "$i" | cut -d: -f2)
 	c3=$(echo "$i" | cut -d: -f3)
 	c4=$(echo "$i" | cut -d: -f4)
 	c5=$(echo "$i" | cut -d: -f5)
+	#Defino opciones por defecto
+	opdefcom="Comentario por defecto"
+	opdefhome="/home/$c1"
+	#La variable $opdefcrearhome la uso tanto como opcion por defecto 
+	#como tambien en caso de tener que crear el home si en la lista aparece la opcion 'si' en el campo 4
+	opdefcrearhome="-m"
+	opdefshell="/bin/bash"
 
-    # Detectar campos vacíos y asignar valores por defecto
+       #Detectar campos vacíos y asignar valores por defecto
 	if test -z "$c2"; then
 		c2=$opdefcom
 	fi
 
 	if test -z "$c3"; then
-        	c3=$opdefhome
+        	c3="$opdefhome"
 	fi
 
     # Si $c4 está vacío o es igual a 'si', asignar que cree el home
@@ -189,16 +248,16 @@ for i in $(cat "$arch"); do
 		yaexiste="$c1"
 		if [ "$mostrar" = "1" ]; then
 			echo "ATENCIÓN: el usuario '$c1' no fue creado porque ya existe" >&2
-			echo ""
+			echo "">&2
 		fi
 	fi
 	#Evaluo si la opcion -c está activa o no, y en cada caso creo los usuarios según ese criterio
 	#Si la variable yaexiste contiene al usuario entonces no lo creo porque ya existe
-	if [ "$passTrue" -eq 1 ] && [ ! "$yaexiste"="$c1" ]; then
-		useradd "$c1" -c "$c2" -d "$c3" $c4 -s "$c5" &>/dev/null
+	if [ "$passTrue" -eq 1 ] && [ ! "$yaexiste" = "$c1" ]; then
+		useradd "$c1" -c "$c2" -d "$c3" "$c4" -s "$c5" &>/dev/null
 		echo "$pass" | passwd --stdin "$c1" &>/dev/null
 	elif [ "$passTrue" -eq 0 ] && [ ! "$yaexiste"="$c1" ]; then
-        	useradd "$c1" -c "$c2" -d "$c3" $c4 -s "$c5" &>/dev/null
+        	useradd "$c1" -c "$c2" -d "$c3" "$c4" -s "$c5" &>/dev/null
 	fi
 	#Evaluo que el usuario haya sido creado con el comando id como hice anteriormente, pero tambien evaluo la variable $yaexiste.
 	#Evaluo esa variable porque si el usuario ya existia no quiero que se ejecute el mensaje de usuario creado con exito etc etc
