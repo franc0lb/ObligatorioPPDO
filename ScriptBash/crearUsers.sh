@@ -232,8 +232,10 @@ for i in $(cat "$arch"); do
 	if [ "$passTrue" -eq 1 ] && [ ! "$yaexiste" = "$c1" ]; then
 		useradd "$c1" -c "$c2" -d "$c3" "$c4" -s "$c5" &>/dev/null
 		echo "$pass" | passwd --stdin "$c1" &>/dev/null
+		usuarios_creados=$((usuarios_creados+1))
 	elif [ "$passTrue" -eq 0 ] && [ ! "$yaexiste" = "$c1" ]; then
         	useradd "$c1" -c "$c2" -d "$c3" "$c4" -s "$c5" &>/dev/null
+		usuarios_creados=$((usuarios_creados+1))
 	fi
 	#Evaluo que el usuario haya sido creado con el comando id como hice anteriormente, pero tambien evaluo la variable $yaexiste.
 	#Evaluo esa variable porque si el usuario ya existia no quiero que se ejecute el mensaje de usuario creado con exito etc etc
@@ -250,7 +252,6 @@ for i in $(cat "$arch"); do
                 fi
                 echo "Shell por defecto: $c5"
                 echo ""
-   	        usuarios_creados=$((usuarios_creados+1))
 	elif [ "$yaexiste" = "$c1" ]; then
 		echo -n
 	elif [ ! "$yaexiste" = "$c1" ] && [ "$mostrar" = "1" ]; then
