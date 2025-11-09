@@ -256,7 +256,7 @@ for i in $(cat "$arch"); do
 	if [ "$passTrue" -eq 1 ] && [ ! "$yaexiste" = "$c1" ]; then
 		useradd "$c1" -c "$c2" -d "$c3" "$c4" -s "$c5" &>/dev/null
 		echo "$pass" | passwd --stdin "$c1" &>/dev/null
-	elif [ "$passTrue" -eq 0 ] && [ ! "$yaexiste"="$c1" ]; then
+	elif [ "$passTrue" -eq 0 ] && [ ! "$yaexiste" = "$c1" ]; then
         	useradd "$c1" -c "$c2" -d "$c3" "$c4" -s "$c5" &>/dev/null
 	fi
 	#Evaluo que el usuario haya sido creado con el comando id como hice anteriormente, pero tambien evaluo la variable $yaexiste.
