@@ -7,7 +7,7 @@ arch=$1
 #que comentario sea cualquier cosa menos 2 puntos,que el home sea cualquier cosa sin espacios
 #que el campo de crear home pueda ser si o no en mayusculas/minusculas 0 o 1 vez
 #y que el campo de la shell pueda ser algo que arranque con barra, siga con caracteres, numeros y guiones bajos y altos, se repita x veces, 0 o 1 vez y termine la linea
-regex='^[^:][a-zA-Z0-9_-]*:[^:]*:[a-zA-Z0-9_/-]*[^[:space:]:]*:(SI|NO|si|no)?:[a-zA-Z0-9/_-]*?'
+regex='^[^:][a-zA-Z0-9_-]*:[^:]*:(/[a-zA-Z0-9/_-]*)?:(SI|NO|si|no)?:(/[a-zA-Z0-9/_-]*)?$'
 regexCampos='^[^:]*:[^:]*:[^:]*:[^:]*:[^:]*$'
 #Se chequea que los parametros sean minimo 1 y maximo 4, siendo el 4 una contraseña en caso de que el 3 sea -c
 if [ $# -lt 1 ]; then
@@ -65,8 +65,11 @@ if [ ! $totlineas -eq $validas2 ]; then
         echo "Se detectaron errores en la sintaxis de la lista">&2
         echo "Errores detectados: $(($totlineas - $validas2))">&2
 	echo "Revise la sintaxis de la lista">&2
+	echo "">&2
 	echo "Recuerde que el nombre del usuario no puede contener espacios ni caracteres raros">&2
 	echo "Recuerde que el home del usuario no puede contener espacios ni caracteres raros">&2
+	echo "Recuerde que el shell del usuario no puede contener espacios ni caracteres raros">&2
+	echo "Recuerde que el shell y el home en caso de existir deben empezar con '/'">&2
         echo "">&2
         echo -e "Lineas invalidas: \n$novalidas2">&2
         echo "">&2
@@ -77,7 +80,7 @@ fi
 #el if testea que $userRepetidos no esté vacío, si es cierto entonces hay usuarios repetidos, y se procede a mostrar esas lineas por pantalla
 userRepetido=$(cut -d: -f1 "$arch" | sort | uniq -d)
 if test -n "$userRepetido"; then
-	userRepetido=$(grep -En ^$userRepetido $arch)
+	userRepetido=$(grep -En "^$userRepetido:" "$arch")
 	echo "Error de sintaxis, hay usuarios repetidos en la lista">&2
 	echo "Lineas no validas:">&2
 	echo "">&2
@@ -85,33 +88,6 @@ if test -n "$userRepetido"; then
 	exit 21
 fi
 
-#Aca estoy detectando si el campo 5 que corresponde a la shell por defecto empieza o no con '/', en caso de existir, y que no contenga espacios ni caracteres no comunes
-shell=$(cut -d: -f5 "$arch")
-RegexShellCorrecta='^[^:]*:[^:]*:[^:]*:[^:]*:/[a-zA-Z0-9_/-]*$'
-if echo "$shell" | grep -Eqv '^/[a-zA-Z0-9_/-]*$'; then
-	shellIncorrecta=$(grep -Evn $RegexShellCorrecta  "$arch")
-	echo "Error de sintaxis, hay usuarios con una shell no valida">&2
-	echo "Recuerde que el campo de la shell debe comenzar siempre con '/' y no puede contener ningún caracter raro, espacio o tabulación">&2
-	echo "Lineas no validas:">&2
-	echo "">&2
-	echo "$shellIncorrecta">&2
-	exit 22
-fi
-
-#Aca chequeo el campo del home (campo 3) para asegurarme que empiece por '/' y no contenga caracteres raros
-homeCampo=$(cut -d: -f3 "$arch")
-RegexHome='^[^:]*:[^:]*:/[a-zA-Z0-9/-_]*:[^:]*:/[a-zA-Z0-9_/-]*$'
-if echo "$homeCampo" | grep -Eqv '/[a-zA-Z0-9/-_]*'; then
-        HomeIncorrecto=$(grep -Evn $RegexHome  "$arch")
-        echo "Error de sintaxis, campo home del usuario no valido">&2
-        echo "Recuerde que el campo del home debe comenzar siempre con '/' y no puede contener ningún caracter raro, espacio o tabulación">&2
-        echo "Lineas no validas:">&2
-        echo "">&2
-        echo "$HomeIncorrecto">&2
-        exit 23
-fi
-
-	
 #Ahora hago varios if que van a ir detectando las opciones que paso el usuario, para asignar contraseña y/o mostrar la creacion del usuario en pantalla
 #Defino variables que en este caso 0 es falso y 1 verdadero, que corresponden a si se ingreso una contraseña con -c y si se debe mostrar la creacion del usuario por pantalla
 passTrue=0
