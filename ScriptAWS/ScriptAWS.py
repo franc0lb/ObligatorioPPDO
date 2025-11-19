@@ -77,9 +77,12 @@ ec2.get_waiter('instance_status_ok').wait(InstanceIds=[instance_id])
 
 # Parte 2: Enviar comandos y extraer resultados
 command = f"""
-sudo yum install -y httpd php php-mysqlnd
-sudo systemctl enable httpd
-sudo systemctl start httpd
+sudo dnf clean all
+sudo dnf makecache
+sudo dnf -y update
+sudo dnf -y install httpd php php-cli php-fpm php-common php-mysqlnd mariadb105
+sudo systemctl enable --now httpd
+sudo systemctl enable --now php-fpm
 
 # Crear carpetas necesarias
 sudo mkdir -p /var/www/html
@@ -117,3 +120,135 @@ while True:
 print("EJECUCION DE COMANDOS E INSTALACION DE PAQUETES:")
 print("")
 print(output['StandardOutputContent'])
+
+######################################################################################################################################
+# 3: CREACION DE BASE DE DATOS RDS
+######################################################################################################################################
+# Parámetros
+rds = boto3.client('rds')
+DB_INSTANCE_ID = 'app-mysql'
+DB_NAME = 'app'
+DB_USER = 'admin'
+# La password debe venir de una variable de entorno
+DB_PASS = os.environ.get('RDS_ADMIN_PASSWORD')
+
+print("Se procede a crear la DB:")
+print("")
+if not DB_PASS:
+    raise Exception('Debes definir la variable de entorno RDS_ADMIN_PASSWORD con la contraseña del admin.')
+    raise Exception('Se hace ejecutando "export RDS_ADMIN_PASSWORD=****"')
+
+try:
+    rds.create_db_instance(
+        DBInstanceIdentifier=DB_INSTANCE_ID,
+        AllocatedStorage=20,
+        DBInstanceClass='db.t3.micro',
+        Engine='mysql',
+        MasterUsername=DB_USER,
+        MasterUserPassword=DB_PASS,
+        DBName=DB_NAME,
+        PubliclyAccessible=True,
+        BackupRetentionPeriod=0
+    )
+    
+    print(f'Instancia RDS {DB_INSTANCE_ID} creada correctamente.')
+except rds.exceptions.DBInstanceAlreadyExistsFault:
+    print(f'La instancia {DB_INSTANCE_ID} ya existe.')
+    print("")
+
+command = f"""
+mysql -h <endpoint-rds> -u <usuario> -p<contraseña> <nombre_db> < /var/www/init_db.sql
+sudo tee /var/www/.env >/dev/null <<'ENV'
+   DB_HOST=<ENDPOINT>
+   DB_NAME=<DB_NAME>
+   DB_USER=<DB_USER>
+   DB_PASS=<DB_PASS>
+
+   APP_USER=<APP_USER>
+   APP_PASS=<APP_PASS>
+   ENV
+
+   sudo chown apache:apache /var/www/.env
+   sudo chmod 600 /var/www/.env```
+"""
+
+response = ssm.send_command(
+    InstanceIds=[instance_id],
+    DocumentName="AWS-RunShellScript",
+    Parameters={'commands': [command]}
+)
+command_id = response['Command']['CommandId']
+
+# Esperar resultado
+while True:
+    try:
+        output = ssm.get_command_invocation(CommandId=command_id, InstanceId=instance_id)
+        if output['Status'] in ['Success', 'Failed', 'Cancelled', 'TimedOut']:
+            break
+        time.sleep(2)
+    except ssm.exceptions.InvocationDoesNotExist:
+        # Se agrega esto para evitar errores cuando el comando aún no fue recibido por el agente SSM
+        pass
+    time.sleep(3)
+print("Se crea tabla de la DB y sus datos:")
+print("")
+print(output['StandardOutputContent'])
+
+######################################################################################################################################
+# 4: CREACION DE SECURITY GROUP
+######################################################################################################################################
+ec2 = boto3.client('ec2')
+# 1. Crear un Security Group que permita tráfico web desde cualquier IP
+sg_name = 'web-sg-boto3'
+print("Se procede a crear el security group, para habilitar el tráfico web:")
+print("")
+try:
+    response = ec2.create_security_group(
+        GroupName=sg_name,
+        Description='Permitir trafico web desde cualquier IP'
+    )
+    sg_id = response['GroupId']
+    print(f"Security Group creado: {sg_id}")
+    ec2.authorize_security_group_ingress(
+        GroupId=sg_id,
+        IpPermissions=[
+            {
+                'IpProtocol': 'tcp',
+                'FromPort': 80,
+                'ToPort': 80,
+                'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
+            }
+            
+            {
+                'IpProtocol': 'tcp',
+                'FromPort': 3306,
+                'ToPort': 3306,
+                'IpRanges': [{'CidrIp': 'sg_id'}]
+             }
+        ]
+    )
+except ClientError as e:
+    if 'InvalidGroup.Duplicate' in str(e):
+        sg_id = ec2.describe_security_groups(GroupNames=[sg_name])['SecurityGroups'][0]['GroupId']
+        print(f"Security Group ya existe: {sg_id}")
+    else:
+        raise
+
+# 2. Asociar el SG a la instancia EC2 creada anteriormente
+
+# Obtener la primera instancia EC2 cuyo tag Name sea 'webserver-devops'
+instances = ec2.describe_instances(Filters=[{'Name': 'tag:Name', 'Values': ['webserver-devops']}])
+instance_id = None
+for reservation in instances['Reservations']:
+    for instance in reservation['Instances']:
+        instance_id = instance['InstanceId']
+        break
+    if instance_id:
+        break
+if not instance_id:
+    raise Exception("No se encontró ninguna instancia con el tag 'webserver-devops'.")
+
+ec2.modify_instance_attribute(InstanceId=instance_id, Groups=[sg_id])
+print(f"SG {sg_id} asociado a la instancia {instance_id}")
+print("Ahora navegue a la IP pública de la instancia para verificar el acceso web.")
+print("")
