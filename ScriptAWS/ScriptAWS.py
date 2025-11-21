@@ -12,7 +12,8 @@ s3 = boto3.client('s3')
 
 # Variables: Nombre del bucket, carpeta local donde estarán alojados los archivos bajados del repo, carpeta remota del s3 donde se van a subir
 bucket_name = 'app-bucket-obligatorio-241688'
-carpeta_local = '/home/franco/APP/' #Yo alojé acá los archivos en mi VM, ajustar esta variable al directorio que corresponda
+#carpeta_local = '/home/franco/APP/' #Yo alojé acá los archivos en mi VM, ajustar esta variable al directorio que corresponda
+carpeta_local = '/home/alumno/ObligatorioPPDO/ScriptAWS/archivosSubir/'
 carpeta_remota = 'APP'
 
 # Obtener todos los archivos de la carpeta local
@@ -126,61 +127,97 @@ print(output['StandardOutputContent'])
 ######################################################################################################################################
 # 3: CREACION DE SECURITY GROUP
 ######################################################################################################################################
+
 ec2 = boto3.client('ec2')
-# 1. Crear un Security Group que permita tráfico web desde cualquier IP
-sg_name = 'web-sg-boto3'
-print("Se procede a crear el security group, para habilitar el tráfico web:")
+
+print("Creación de Security Groups:")
 print("")
+
+#######################################################################
+# SG 1 → Security Group para la instancia EC2
+#######################################################################
+sg_ec2_name = 'web-sg-boto3'
+
 try:
     response = ec2.create_security_group(
-        GroupName=sg_name,
-        Description='Permitir trafico web desde cualquier IP'
+        GroupName=sg_ec2_name,
+        Description='Permitir HTTP y permitir salida hacia RDS'
     )
-    sg_id = response['GroupId']
-    print(f"Security Group creado: {sg_id}")
+    sg_ec2_id = response['GroupId']
+    print(f"Security Group EC2 creado: {sg_ec2_id}")
+
+    # Reglas de entrada (inbound) → HTTP
     ec2.authorize_security_group_ingress(
-        GroupId=sg_id,
+        GroupId=sg_ec2_id,
         IpPermissions=[
             {
                 'IpProtocol': 'tcp',
                 'FromPort': 80,
                 'ToPort': 80,
                 'IpRanges': [{'CidrIp': '0.0.0.0/0'}]
-            },
-            
+            }
+        ]
+    )
+
+except ClientError as e:
+    if 'InvalidGroup.Duplicate' in str(e):
+        sg_ec2_id = ec2.describe_security_groups(GroupNames=[sg_ec2_name])['SecurityGroups'][0]['GroupId']
+        print(f"Security Group EC2 ya existe: {sg_ec2_id}")
+    else:
+        raise
+
+#######################################################################
+# SG 2 → Security Group exclusivo para RDS (permite conexión desde EC2)
+#######################################################################
+sg_rds_name = 'rds-mysql-sg'
+
+try:
+    response = ec2.create_security_group(
+        GroupName=sg_rds_name,
+        Description='Permitir MySQL desde la instancia EC2'
+    )
+    sg_rds_id = response['GroupId']
+    print(f"Security Group RDS creado: {sg_rds_id}")
+
+    # Permitir MySQL desde el SG de la EC2
+    ec2.authorize_security_group_ingress(
+        GroupId=sg_rds_id,
+        IpPermissions=[
             {
                 'IpProtocol': 'tcp',
                 'FromPort': 3306,
                 'ToPort': 3306,
-                'UserIdGroupPairs': [{'GroupId': sg_id}]
-             }
+                'UserIdGroupPairs': [{'GroupId': sg_ec2_id}]
+            }
         ]
     )
+
 except ClientError as e:
     if 'InvalidGroup.Duplicate' in str(e):
-        sg_id = ec2.describe_security_groups(GroupNames=[sg_name])['SecurityGroups'][0]['GroupId']
-        print(f"Security Group ya existe: {sg_id}")
+        sg_rds_id = ec2.describe_security_groups(GroupNames=[sg_rds_name])['SecurityGroups'][0]['GroupId']
+        print(f"Security Group RDS ya existe: {sg_rds_id}")
     else:
         raise
 
-# 2. Asociar el SG a la instancia EC2 creada anteriormente
-
-# Obtener la primera instancia EC2 cuyo tag Name sea 'webserver-devops'
-instances = ec2.describe_instances(Filters=[{'Name': 'tag:Name', 'Values': ['webserver-devops']}])
-instance_id = None
-for reservation in instances['Reservations']:
-    for instance in reservation['Instances']:
-        instance_id = instance['InstanceId']
-        break
-    if instance_id:
-        break
-if not instance_id:
-    raise Exception("No se encontró ninguna instancia con el tag 'webserver-devops'.")
-
-ec2.modify_instance_attribute(InstanceId=instance_id, Groups=[sg_id])
-print(f"SG {sg_id} asociado a la instancia {instance_id}")
-print("Ahora navegue a la IP pública de la instancia para verificar el acceso web.")
 print("")
+print("Security Groups creados y configurados correctamente.")
+print("")
+
+#######################################################################
+# Asociar SG EC2 a la instancia
+#######################################################################
+print(f"Usando instancia creada anteriormente: {instance_id}")
+
+print("Esperando que la instancia esté en estado 'running' para asociar SG...")
+ec2.get_waiter('instance_running').wait(InstanceIds=[instance_id])
+print("Instancia en estado running.")
+
+# Asociar
+ec2.modify_instance_attribute(InstanceId=instance_id, Groups=[sg_ec2_id])
+print(f"SG {sg_ec2_id} asociado a la instancia {instance_id}")
+print("")
+
+
 
 ######################################################################################################################################
 # 4: CREACION DE BASE DE DATOS RDS
@@ -191,9 +228,8 @@ DB_INSTANCE_ID = 'app-mysql'
 DB_NAME = 'app'
 DB_USER = 'admin'
 # La password debe venir de una variable de entorno
-#DB_PASS = os.environ.get('RDS_ADMIN_PASSWORD')
-RDS_ADMIN_PASSWORD = 'Hola1122334455'
-DB_PASS = RDS_ADMIN_PASSWORD
+DB_PASS = os.environ.get('RDS_ADMIN_PASSWORD')
+#RDS_ADMIN_PASSWORD = 'Hola1122334455'
 
 APP_USER='admin'
 APP_PASS='admin123'
@@ -207,6 +243,7 @@ if not DB_PASS:
 try:
     rds.create_db_instance(
         DBInstanceIdentifier=DB_INSTANCE_ID,
+        VpcSecurityGroupIds=[sg_rds_id],
         AllocatedStorage=20,
         DBInstanceClass='db.t3.micro',
         Engine='mysql',
@@ -223,9 +260,9 @@ except rds.exceptions.DBInstanceAlreadyExistsFault:
     print(f'La instancia {DB_INSTANCE_ID} ya existe.')
     print("")
 
+rds.get_waiter('db_instance_available').wait(DBInstanceIdentifier=DB_INSTANCE_ID)
 db_info = rds.describe_db_instances(DBInstanceIdentifier=DB_INSTANCE_ID)
 DB_HOST = db_info["DBInstances"][0]["Endpoint"]["Address"]
-
 command = f"""
 sudo mysql -h {DB_HOST} -u {DB_USER} -p"{DB_PASS}" {DB_NAME} < /var/www/init_db.sql
 sudo tee /var/www/.env >/dev/null <<EOF
@@ -249,17 +286,18 @@ response = ssm.send_command(
 )
 command_id = response['Command']['CommandId']
 
-# Esperar resultado
 while True:
     try:
-        output = ssm.get_command_invocation(CommandId=command_id, InstanceId=instance_id)
+        output = ssm.get_command_invocation(
+            CommandId=command_id,
+            InstanceId=instance_id
+        )
+
         if output['Status'] in ['Success', 'Failed', 'Cancelled', 'TimedOut']:
             break
-        time.sleep(2)
+
     except ssm.exceptions.InvocationDoesNotExist:
-        # Se agrega esto para evitar errores cuando el comando aún no fue recibido por el agente SSM
+        # El comando todavía no está listo
         pass
-    time.sleep(3)
-print("Se crea tabla de la DB y sus datos:")
-print("")
-print(output['StandardOutputContent'])
+
+    time.sleep(2)  # Solo 1 sleep, siempre al final
