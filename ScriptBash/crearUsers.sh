@@ -1,5 +1,13 @@
 #!/bin/bash
 
+# Chequeo de que el script se corra con sudo o como root
+if [ $EUID -ne 0 ]; then
+    echo "Este script debe ejecutarse como root o con sudo."
+    exit 100
+fi
+
+
+
 #Defino una variable para $1 que seria la lista
 #Defino una variable para la expresion regular que utilizo para verificar que haya 4 campos y otra para que la sintaxis de esos 4 campos
 arch=$1
