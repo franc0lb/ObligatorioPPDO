@@ -167,15 +167,6 @@ Donde `<n>` es el total de usuarios creados exitosamente.
 
 ---
 
-## Archivo del script
-
-El script completo se encuentra aquí:  
-:contentReference[oaicite:0]{index=0}
-
----
-
-
-
 
 # Parte 2 - Automatización de Infraestructura AWS con Boto3
 ## Script: ScriptAWS/ScriptAWS.py
