@@ -1,6 +1,6 @@
 # Obligatorio Programación para DevOps – Agosto 2025
 
-## Automatización de Infraestructura AWS con Boto3
+## Parte 1 - AWS - Automatización de Infraestructura AWS con Boto3
 
 Este repositorio contiene un script en Python que automatiza la creación completa de una infraestructura básica en AWS, incluyendo:
 
