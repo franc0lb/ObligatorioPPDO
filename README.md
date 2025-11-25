@@ -2,7 +2,7 @@
 
   
 # Parte 1 - Automatización de creación de usuarios en Linux
-## Script: crearUsers.sh
+## Script: ScriptBash/crearUsers.sh
 Este script permite crear usuarios en masa a partir de un archivo de entrada, validando sintaxis, evitando duplicados, aplicando valores por defecto y permitiendo asignar una contraseña inicial.  
 Incluye soporte opcional para mostrar por pantalla los detalles de la creación de cada usuario.
 
@@ -177,8 +177,8 @@ El script completo se encuentra aquí:
 
 
 
-## Parte 2 - Automatización de Infraestructura AWS con Boto3
-
+# Parte 2 - Automatización de Infraestructura AWS con Boto3
+## Script: ScriptAWS/ScriptAWS.py
 Este repositorio contiene un script en Python que automatiza la creación completa de una infraestructura básica en AWS, incluyendo:
 
 - Creación de un bucket S3  
