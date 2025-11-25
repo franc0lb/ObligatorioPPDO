@@ -1,138 +1,133 @@
-<h1>Obligatorio Programación para DevOps - Agosto 2025</h1>
+Obligatorio Programación para DevOps – Agosto 2025
+Automatización de Infraestructura AWS con Boto3
 
-<h2>Automatización de Infraestructura AWS con Boto3</h2>
-<p>
 Este repositorio contiene un script en Python que automatiza la creación completa de una infraestructura básica en AWS, incluyendo:
-</p>
 
-<ul>
-  <li>Creación de un bucket S3</li>
-  <li>Descarga y despliegue de archivos de una aplicación</li>
-  <li>Creación y configuración de una instancia EC2</li>
-  <li>Configuración y asignación de Security Groups</li>
-  <li>Creación e inicialización de una base de datos MySQL en Amazon RDS</li>
-  <li>Configuración del entorno necesario para que la aplicación funcione</li>
-</ul>
+Creación de un bucket S3
 
-<p>
-Todo el proceso se ejecuta de forma automática mediante llamadas a la API de AWS utilizando boto3 y AWS Systems Manager (SSM).
-</p>
+Descarga y despliegue de archivos de una aplicación
 
-<hr />
+Creación y configuración de una instancia EC2
 
-<h2>Requisitos</h2>
+Configuración y asignación de Security Groups
 
-<h3>Sistema operativo</h3>
-<p>Un equipo o máquina virtual Linux.</p>
+Creación e inicialización de una base de datos MySQL en Amazon RDS
 
-<h3>Paquetes necesarios</h3>
-<ul>
-  <li>Python 3.6 o superior</li>
-  <li>pip</li>
-  <li>boto3</li>
-  <li>AWS CLI</li>
-  <li>requests</li>
-</ul>
+Configuración del entorno necesario para que la aplicación funcione
 
-<h3>Variables de entorno obligatorias</h3>
-<p>Antes de ejecutar el script, deben definirse dos contraseñas:</p>
+Todo el proceso se ejecuta automáticamente mediante llamadas a la API de AWS utilizando boto3 y AWS Systems Manager (SSM).
 
-<pre><code>export RDS_ADMIN_PASSWORD="contraseña_admin_rds"
+Requisitos
+Sistema operativo
+
+Un equipo o máquina virtual Linux.
+
+Paquetes necesarios
+
+Python 3.6 o superior
+
+pip
+
+boto3
+
+AWS CLI
+
+requests
+
+Variables de entorno obligatorias
+
+Antes de ejecutar el script, deben definirse dos contraseñas:
+
+export RDS_ADMIN_PASSWORD="contraseña_admin_rds"
 export RDS_APP_PASSWORD="contraseña_app"
-</code></pre>
 
-<p>El script no avanzará si estas variables no están definidas.</p>
 
-<hr />
+El script no avanzará si estas variables no están definidas.
 
-<h2>Qué automatiza el script</h2>
+¿Qué automatiza el script?
+1. Creación del bucket S3 y subida de archivos
 
-<h3>1. Creación del bucket S3 y subida de archivos</h3>
-<ul>
-  <li>Descarga automáticamente el repositorio desde GitHub en formato ZIP.</li>
-  <li>Extrae los archivos en un directorio temporal.</li>
-  <li>Identifica la carpeta donde se encuentran los archivos de la aplicación.</li>
-  <li>Crea un bucket S3 (si no existe).</li>
-  <li>Sube todos los archivos a una carpeta llamada <code>APP</code> dentro del bucket.</li>
-</ul>
+Descarga automáticamente el repositorio desde GitHub en formato ZIP.
 
-<h3>2. Creación de la instancia EC2 y configuración inicial</h3>
-<ul>
-  <li>Crea una instancia EC2 <code>t2.micro</code> con un role previamente definido (<code>LabInstanceProfile</code>).</li>
-  <li>Espera a que la instancia esté lista para recibir comandos.</li>
-  <li>Usa AWS SSM para ejecutar una serie de comandos dentro de la instancia:</li>
-  <ul>
-    <li>Instalación de Apache, PHP y dependencias</li>
-    <li>Creación de directorios</li>
-    <li>Descarga de archivos desde el bucket S3</li>
-    <li>Configuración de permisos</li>
-    <li>Reinicio de servicios necesarios</li>
-  </ul>
-</ul>
+Extrae los archivos en un directorio temporal.
 
-<h3>3. Creación de Security Groups</h3>
-<p>El script genera dos grupos de seguridad:</p>
+Identifica la carpeta donde se encuentran los archivos de la aplicación.
 
-<ul>
-  <li><strong>SG para EC2 (<code>web-sg-boto3</code>)</strong>
-    <ul>
-      <li>Permite tráfico HTTP (TCP/80) desde cualquier origen.</li>
-    </ul>
-  </li>
-  <li><strong>SG para RDS (<code>rds-mysql-sg</code>)</strong>
-    <ul>
-      <li>Permite tráfico MySQL (TCP/3306) únicamente desde el SG de la EC2.</li>
-    </ul>
-  </li>
-</ul>
+Crea un bucket S3 (si no existe).
 
-<p>Después de crearlos, el script asigna el SG correspondiente a la instancia EC2.</p>
+Sube todos los archivos a una carpeta llamada APP dentro del bucket.
 
-<h3>4. Creación e inicialización de la base RDS</h3>
-<ul>
-  <li>Crea una instancia MySQL RDS accesible públicamente.</li>
-  <li>Asigna el security group que permite conexiones desde la EC2.</li>
-  <li>Espera a que la instancia esté disponible.</li>
-  <li>Obtiene el endpoint de la base.</li>
-  <li>Desde la EC2 (mediante SSM), ejecuta:</li>
-  <ul>
-    <li>el archivo SQL que inicializa la base (tablas, usuarios, datos),</li>
-    <li>la creación del archivo <code>.env</code> con variables necesarias para la aplicación,</li>
-    <li>la asignación de permisos adecuados para proteger credenciales.</li>
-  </ul>
-</ul>
+2. Creación de la instancia EC2 y configuración inicial
 
-<hr />
+Crea una instancia t2.micro con un role previamente definido (LabInstanceProfile).
 
-<h2>Cómo ejecutar el script</h2>
+Espera a que la instancia esté lista para recibir comandos.
 
-<ol>
-  <li>
-    Configurar las credenciales de AWS:
-    <pre><code>aws configure</code></pre>
-  </li>
-  <li>
-    Exportar las variables de entorno:
-    <pre><code>export RDS_ADMIN_PASSWORD="*****"
+Usa AWS SSM para ejecutar comandos dentro de la instancia:
+
+Instalación de Apache, PHP y dependencias
+
+Creación de directorios
+
+Descarga de archivos desde S3
+
+Configuración de permisos
+
+Reinicio de servicios necesarios
+
+3. Creación de Security Groups
+
+El script genera dos grupos de seguridad:
+
+SG para EC2 (web-sg-boto3)
+
+Permite tráfico HTTP (TCP/80) desde cualquier origen.
+
+SG para RDS (rds-mysql-sg)
+
+Permite tráfico MySQL (TCP/3306) únicamente desde el SG de la EC2.
+
+Después de crearlos, el script asigna el SG correspondiente a la instancia EC2.
+
+4. Creación e inicialización de la base RDS
+
+Crea una instancia MySQL RDS accesible públicamente.
+
+Asigna el security group que permite conexiones desde la EC2.
+
+Espera a que la instancia esté disponible.
+
+Obtiene el endpoint de la base.
+
+Desde la EC2 (mediante SSM), ejecuta:
+
+El archivo SQL que inicializa la base (tablas, usuarios, datos)
+
+La creación del archivo .env con variables necesarias
+
+La asignación de permisos adecuados para proteger credenciales
+
+Cómo ejecutar el script
+1. Configurar las credenciales de AWS:
+aws configure
+
+2. Exportar las variables de entorno:
+export RDS_ADMIN_PASSWORD="*****"
 export RDS_APP_PASSWORD="*****"
-</code></pre>
-  </li>
-  <li>
-    Ejecutar el script:
-    <pre><code>python ScriptAWS.py</code></pre>
-  </li>
-</ol>
 
-<hr />
+3. Ejecutar el script:
+python ScriptAWS.py
 
-<h2>Arquitectura resultante</h2>
-<p>Después de ejecutar el script, se implementa automáticamente esta arquitectura:</p>
+Arquitectura resultante
 
-<ul>
-  <li>S3 con los archivos de la aplicación</li>
-  <li>EC2 actuando como servidor web con Apache y PHP</li>
-  <li>RDS MySQL inicializado y conectado a EC2</li>
-  <li>Seguridad controlada mediante Security Groups</li>
-  <li>Comunicación RDS ↔ EC2 correctamente configurada</li>
-  <li>Infraestructura completamente reproducible mediante un solo script</li>
-</ul>
+Después de ejecutar el script, se implementa automáticamente esta arquitectura:
+
+S3 con los archivos de la aplicación
+
+EC2 actuando como servidor web con Apache y PHP
+
+RDS MySQL inicializado y conectado a EC2
+
+Seguridad controlada mediante Security Groups
+
+Comunicación RDS ↔ EC2 correctamente configurada
