@@ -2,7 +2,7 @@
 
   
 # Parte 1 - Automatización de creación de usuarios en Linux
-## Ubicación del archivo: (./ScriptBash/crearUsers.sh)
+## Ubicación del archivo: [Ver archivo específico](./ScriptBash/crearUsers.sh)
 Este script permite crear usuarios en masa a partir de un archivo de entrada, validando sintaxis, evitando duplicados, aplicando valores por defecto y permitiendo asignar una contraseña inicial.  
 Incluye soporte opcional para mostrar por pantalla los detalles de la creación de cada usuario.
 
