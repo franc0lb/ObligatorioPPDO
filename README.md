@@ -49,7 +49,7 @@ usuario:comentario:/ruta/home:SI|NO:/ruta/shell
 - Campos vacíos se completan con valores por defecto:
   - Comentario: `Comentario por defecto`
   - Home: `/home/<usuario>`
-  - Creación del home: `-m (useradd creará el home, la opción por defecto es que el home se cree)`
+  - Creación del home: `Se aplicará el modificador -m cuando se ejecute useradd (useradd creará el home, la opción por defecto es que el home se cree)`
   - Shell: `/bin/bash`
 
 Ejemplo:
