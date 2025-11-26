@@ -91,6 +91,9 @@ sudo ./crearUsers.sh Archivo_con_los_usuarios_a_crear -ic 1234
 sudo ./crearUsers.sh Archivo_con_los_usuarios_a_crear -ci 1234
 ```
 
+Contraseña por defecto:
+  No existe una contraseña por defecto, el usuario se va a crear con useradd y quedará sin contraseña si no se asignó previamente con el modificador -c
+
 ---
 
 ## Validaciones realizadas por el script
