@@ -135,12 +135,12 @@ El script devuelve distintos códigos según el error detectado:
 | 100 | No se ejecutó como root |
 | 0   | Faltan parámetros |
 | 1   | Demasiados parámetros |
-| 2   | Archivo inexistente |
-| 3   | No es un archivo regular |
-| 4   | Sin permisos de lectura |
-| 5   | Sintaxis incorrecta (campos) |
-| 20  | Sintaxis incorrecta (regex) |
-| 21  | Usuarios duplicados |
+| 2   | El archivo lista es inexistente |
+| 3   | EL archivo lista no es un archivo regular |
+| 4   | Sin permisos de lectura sobre el archivo lista |
+| 5   | Sintaxis incorrecta (campos) en archivo lista |
+| 20  | Sintaxis incorrecta (regex) en archivo lista |
+| 21  | Usuarios duplicados en archivo lista |
 | 6   | Falta contraseña después de `-c` |
 | 7   | Parámetro 3 inválido |
 | 8   | Parámetro 2 inválido |
@@ -154,7 +154,7 @@ El script devuelve distintos códigos según el error detectado:
 |--------|-------------------|
 | Comentario | `Comentario por defecto` |
 | Home | `/home/<usuario>` |
-| Crear home | `SI` |
+| Crear home | `-m` |
 | Shell | `/bin/bash` |
 
 ---
