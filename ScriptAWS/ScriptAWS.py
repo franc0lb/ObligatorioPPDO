@@ -9,7 +9,7 @@ import zipfile
 import io
 
 ####################################################################################
-# CHEQUEO DE VARIABLES DE ENTORNO
+# 1 - librerías y chequeos 
 ####################################################################################
 # La password de la app y de la db deben venir de variables de entorno
 DB_PASS = os.environ.get('RDS_ADMIN_PASSWORD')
@@ -24,7 +24,7 @@ if not APP_PASS:
     raise Exception('Debes definir la variable de entorno RDS_APP_PASSWORD con la contraseña para user admin de la app, se hace ejecutando "export RDS_APP_PASSWORD=****"')
 
 ######################################################################################################################################
-# 1: CREACION DEL BUCKET Y SUBIDA DE ARCHIVOS AL MISMO
+# 2 - bucket S3 y archivos
 ######################################################################################################################################
 
 s3 = boto3.client('s3')
@@ -92,7 +92,7 @@ print("")
 
 
 ######################################################################################################################################
-# 2: CREACION DE INSTANCIA EC2 Y EJECUCION DE COMANDOS DENTRO DE LA INSTANCIA (INSTALACION DE PAQUETES, MOVER ARCHIVOS, ETC)
+# 3 - creación de instancia EC2 y ejecución de comandos dento de la instancia
 ######################################################################################################################################
 
 ec2 = boto3.client('ec2')
@@ -173,7 +173,7 @@ print(output['StandardOutputContent'])
 
 
 ######################################################################################################################################
-# 3: CREACION DE SECURITY GROUPS
+# 4 - creación de security groups 
 ######################################################################################################################################
 
 ec2 = boto3.client('ec2')
@@ -182,7 +182,7 @@ print("Creación de Security Groups:")
 print("")
 
 #######################################################################
-# SG 1 → Security Group para la instancia EC2
+# SG 1 - Security Group para la instancia EC2
 #######################################################################
 sg_ec2_name = 'web-sg-boto3' # se crea sg para la instancia de ec2 con el nombre web-sg-boto3
 
@@ -217,7 +217,7 @@ except ClientError as e:
         raise
 
 #######################################################################
-# SG 2 → Security Group exclusivo para RDS (permite conexión desde EC2)
+# SG 2 - Security Group exclusivo para RDS (permite conexión desde EC2)
 #######################################################################
 sg_rds_name = 'rds-mysql-sg'   # Este es el sg para la instancia rds donde corre la db, se debe permitir el tráfico tcp hacia el puerto de mysql desde el sg de ec2
 
@@ -273,7 +273,7 @@ print("")
 
 
 ######################################################################################################################################
-# 4: CREACION DE BASE DE DATOS RDS
+# 5 - Creación de la base RDS
 ######################################################################################################################################
 # Parámetros
 rds = boto3.client('rds')
