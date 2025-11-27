@@ -307,11 +307,11 @@ except rds.exceptions.DBInstanceAlreadyExistsFault:
 rds.get_waiter('db_instance_available').wait(DBInstanceIdentifier=DB_INSTANCE_ID)
 db_info = rds.describe_db_instances(DBInstanceIdentifier=DB_INSTANCE_ID)
 DB_HOST = db_info["DBInstances"][0]["Endpoint"]["Address"]
-# Corro comandos dentro de la instancia RDS
+# Corro comandos dentro de la instancia EC2
 command = f"""
 # Me conecto a la base mysql, y le ejecuto init_db.sql para cargar tablas, usuarios etc
 sudo mysql -h {DB_HOST} -u {DB_USER} -p"{DB_PASS}" {DB_NAME} < /var/www/init_db.sql 
-# Creo el archivo .env que contiene las variables de entorno que va a usra la app web
+# Creo el archivo .env que contiene las variables de entorno que va a usar la app web
 sudo tee /var/www/.env >/dev/null <<EOF  
 DB_HOST={DB_HOST}
 DB_NAME={DB_NAME}
