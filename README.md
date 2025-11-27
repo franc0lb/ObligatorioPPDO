@@ -285,3 +285,6 @@ Después de ejecutar el script, se implementa automáticamente esta arquitectura
 - Seguridad controlada mediante Security Groups  
 - Comunicación RDS ↔ EC2 correctamente configurada  
 - Infraestructura completamente reproducible mediante un solo script
+
+## Aclaración sobre modificación de archivo [init_db.sql](./ScriptAWS/archivosSubir/init_db.sql)
+Se modificó este archivo para que la base de datos creada se llame app.
