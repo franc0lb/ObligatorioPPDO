@@ -288,3 +288,6 @@ Después de ejecutar el script, se implementa automáticamente esta arquitectura
 
 ## Aclaración sobre modificación de archivo [init_db.sql](./ScriptAWS/archivosSubir/init_db.sql)
 Se modificó este archivo para que la base de datos creada se llame app.
+
+## Documentación sobre el obligatorio
+La documentación está en este archivo PDF [Documentación](./Documentación/241688-Obligatorio DEVOPS.pdf)
