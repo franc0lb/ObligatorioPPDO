@@ -290,4 +290,4 @@ Después de ejecutar el script, se implementa automáticamente esta arquitectura
 Se modificó este archivo para que la base de datos creada se llame app.
 
 ## Documentación sobre el obligatorio
-La documentación está en este archivo PDF [Documentación](./Documentación/archivosSubir/241688-Obligatorio-DEVOPS.pdf)
+La documentación está en este archivo PDF [Documentación](./Documentación/241688-Obligatorio-DEVOPS.pdf)
